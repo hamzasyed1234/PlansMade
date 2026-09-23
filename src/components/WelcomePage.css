@@ -1,0 +1,229 @@
+@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700&display=swap");
+
+:root {
+  --beige-bg: #f4eedc;
+  --beige-card: #fbf6e8;
+  --olive: #6e7b4f;
+  --olive-dark: #4a5536;
+  --olive-light: #a9b78c;
+  --mustard: #e8b23d;
+  --mustard-dark: #cf9a26;
+  --outline: #4a5536;
+  --shadow: rgba(74, 85, 54, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.welcome-page {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--beige-bg);
+  background-image: radial-gradient(var(--olive-light) 1px, transparent 1px);
+  background-size: 26px 26px;
+  background-position: -8px -8px;
+  font-family: "Nunito", sans-serif;
+  color: var(--olive-dark);
+  position: relative;
+  overflow-x: hidden;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) 0;
+}
+
+/* Main content */
+.welcome-content {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 72px 24px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.welcome-logo {
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+.welcome-title {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 800;
+  font-size: clamp(28px, 6vw, 38px);
+  color: var(--olive-dark);
+  margin: 0 0 28px;
+}
+
+.title-accent {
+  color: var(--mustard);
+}
+
+/* Slideshow bubble — thick rounded outline, speech-bubble feel */
+.slideshow-bubble {
+  width: 100%;
+  background: var(--beige-card);
+  border: 4px solid var(--outline);
+  border-radius: 32px;
+  box-shadow: 0 6px 0 var(--shadow);
+  padding: 28px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.slide-content {
+  flex: 1;
+  min-width: 0;
+  animation: slide-in 0.35s ease;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide-image {
+  width: 100%;
+  max-height: 160px;
+  object-fit: contain;
+  margin-bottom: 12px;
+  border-radius: 18px;
+}
+
+.slide-title {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  margin: 0 0 8px;
+  color: var(--olive-dark);
+}
+
+.slide-text {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--olive-dark);
+  opacity: 0.85;
+}
+
+.slide-arrow {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid var(--outline);
+  background: var(--beige-bg);
+  color: var(--olive-dark);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+.slide-arrow:hover {
+  transform: scale(1.08);
+}
+
+/* Dots */
+.slide-dots {
+  display: flex;
+  gap: 8px;
+  margin: 18px 0 28px;
+}
+
+.slide-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--olive-light);
+  border: 2px solid var(--outline);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.slide-dot.active {
+  background: var(--mustard);
+  transform: scale(1.2);
+}
+
+/* CTA */
+.invite-btn {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--olive-dark);
+  background: var(--mustard);
+  border: 3px solid var(--outline);
+  border-radius: 999px;
+  padding: 14px 28px;
+  cursor: pointer;
+  box-shadow: 0 5px 0 var(--mustard-dark);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.invite-btn:hover {
+  transform: translateY(-2px);
+}
+
+.invite-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--mustard-dark);
+}
+
+.lobby-btn {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--beige-card);
+  background: var(--olive);
+  border: 2px solid var(--outline);
+  border-radius: 999px;
+  padding: 8px 18px;
+  margin-top: 12px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--olive-dark);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  animation: pop-in 0.25s ease;
+}
+
+.lobby-btn:hover {
+  transform: translateY(-1px);
+}
+
+.lobby-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--olive-dark);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 420px) {
+  .welcome-content {
+    padding: 60px 16px 40px;
+  }
+  .slideshow-bubble {
+    padding: 22px 14px;
+  }
+}

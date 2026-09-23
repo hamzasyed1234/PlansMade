@@ -1,0 +1,188 @@
+@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700&display=swap");
+
+:root {
+  --beige-bg: #f4eedc;
+  --beige-card: #fbf6e8;
+  --olive: #6e7b4f;
+  --olive-dark: #4a5536;
+  --olive-light: #a9b78c;
+  --mustard: #e8b23d;
+  --mustard-dark: #cf9a26;
+  --outline: #4a5536;
+  --shadow: rgba(74, 85, 54, 0.25);
+}
+
+.lobby-page {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--beige-bg);
+  background-image: radial-gradient(var(--olive-light) 1px, transparent 1px);
+  background-size: 26px 26px;
+  background-position: -8px -8px;
+  font-family: "Nunito", sans-serif;
+  color: var(--olive-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.lobby-content {
+  width: 100%;
+  max-width: 420px;
+}
+
+.name-bubble {
+  background: var(--beige-card);
+  border: 4px solid var(--outline);
+  border-radius: 32px;
+  box-shadow: 0 6px 0 var(--shadow);
+  padding: 32px 24px;
+  text-align: center;
+  animation: pop-in 0.3s ease;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.lobby-title {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 800;
+  font-size: clamp(24px, 6vw, 30px);
+  margin: 0 0 8px;
+}
+
+.lobby-subtext {
+  font-size: 15px;
+  opacity: 0.85;
+  margin: 0 0 24px;
+}
+
+.name-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.name-input {
+  font-family: "Nunito", sans-serif;
+  font-size: 16px;
+  padding: 12px 16px;
+  border: 3px solid var(--outline);
+  border-radius: 16px;
+  background: var(--beige-bg);
+  color: var(--olive-dark);
+  outline: none;
+}
+
+.name-input:focus {
+  border-color: var(--olive);
+}
+
+.join-btn {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--olive-dark);
+  background: var(--mustard);
+  border: 3px solid var(--outline);
+  border-radius: 999px;
+  padding: 12px 24px;
+  cursor: pointer;
+  box-shadow: 0 5px 0 var(--mustard-dark);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.join-btn:hover {
+  transform: translateY(-2px);
+}
+
+.join-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--mustard-dark);
+}
+
+.lobby-joined-view {
+  text-align: center;
+}
+
+.participant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.name-tile {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--olive-dark);
+  background: var(--beige-card);
+  border: 3px solid var(--outline);
+  border-radius: 18px;
+  padding: 14px 10px;
+  cursor: default;
+  position: relative;
+  box-shadow: 0 4px 0 var(--shadow);
+  animation: pop-in 0.25s ease;
+  transition: transform 0.15s ease;
+}
+
+.name-tile.me {
+  background: var(--olive-light);
+}
+
+.name-tile.kickable {
+  cursor: pointer;
+}
+
+.name-tile.kickable:hover {
+  transform: translateY(-2px);
+  background: #e8b5a8;
+  border-color: #b9583f;
+}
+
+.name-tile:disabled {
+  cursor: default;
+}
+
+.admin-badge {
+  display: block;
+  font-family: "Nunito", sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--mustard-dark);
+  margin-top: 4px;
+}
+
+.continue-btn {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--olive-dark);
+  background: var(--mustard);
+  border: 3px solid var(--outline);
+  border-radius: 999px;
+  padding: 12px 28px;
+  cursor: pointer;
+  box-shadow: 0 5px 0 var(--mustard-dark);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.continue-btn:hover {
+  transform: translateY(-2px);
+}
+
+.continue-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--mustard-dark);
+}
