@@ -4,6 +4,9 @@ import { supabase } from "../supabaseClient";
 import "./LobbyPage.css";
 import ParticipantsPanel from "./ParticipantsPanel";
 
+const STALE_AFTER_MS = 60_000; // consider a participant gone if no heartbeat in this long
+const HEARTBEAT_INTERVAL_MS = 20_000;
+
 export default function LobbyPage() {
   const { sessionId } = useParams();
   const location = useLocation();
@@ -13,10 +16,31 @@ export default function LobbyPage() {
   const [name, setName] = useState("");
   const [joined, setJoined] = useState(false);
   const [myParticipantId, setMyParticipantId] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [participants, setParticipants] = useState([]);
+  const [onlineIds, setOnlineIds] = useState(new Set());
 
-  // Subscribe to live participant changes for this session
+  // Derive "me" and admin status from the live participants list, rather than
+  // tracking admin as separate state — this way an automatic handoff (below)
+  // is reflected immediately for everyone, not just set once at join time.
+  const me = participants.find((p) => p.id === myParticipantId);
+  const isAdmin = Boolean(me?.is_admin);
+
+  // One-time cleanup: purge anyone who hasn't checked in recently.
+  // Runs whenever a lobby link is opened, so a dead session gets swept
+  // even if nobody was around to react to the last person leaving.
+  useEffect(() => {
+    const purgeStale = async () => {
+      const cutoff = new Date(Date.now() - STALE_AFTER_MS).toISOString();
+      await supabase
+        .from("participants")
+        .delete()
+        .eq("session_id", sessionId)
+        .lt("last_seen", cutoff);
+    };
+    purgeStale();
+  }, [sessionId]);
+
+  // Fetch + subscribe to live participant changes for this session
   useEffect(() => {
     if (!joined) return;
 
@@ -45,6 +69,68 @@ export default function LobbyPage() {
     };
   }, [joined, sessionId]);
 
+  // Presence: tracks who is actually connected right now (separate from the
+  // participants table, which just stores who has ever joined).
+  useEffect(() => {
+    if (!joined || !myParticipantId) return;
+
+    const presenceChannel = supabase.channel(`presence-${sessionId}`, {
+      config: { presence: { key: myParticipantId } },
+    });
+
+    presenceChannel.on("presence", { event: "sync" }, () => {
+      const state = presenceChannel.presenceState();
+      setOnlineIds(new Set(Object.keys(state)));
+    });
+
+    presenceChannel.subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await presenceChannel.track({ online_at: new Date().toISOString() });
+      }
+    });
+
+    return () => {
+      supabase.removeChannel(presenceChannel);
+    };
+  }, [joined, myParticipantId, sessionId]);
+
+  // Heartbeat: keep last_seen fresh while this tab is open and joined
+  useEffect(() => {
+    if (!joined || !myParticipantId) return;
+
+    const ping = () =>
+      supabase.from("participants").update({ last_seen: new Date().toISOString() }).eq("id", myParticipantId);
+
+    ping();
+    const interval = setInterval(ping, HEARTBEAT_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [joined, myParticipantId]);
+
+  // Automatic admin handoff: if the current admin is no longer online,
+  // the earliest-joined online participant promotes themselves.
+  // Only that one client performs the write, so there's no race between
+  // everyone trying to self-promote at once.
+  useEffect(() => {
+    if (!joined || participants.length === 0) return;
+
+    const admin = participants.find((p) => p.is_admin);
+    if (!admin || onlineIds.has(admin.id)) return; // admin still here, nothing to do
+
+    const onlineOthers = participants
+      .filter((p) => p.id !== admin.id && onlineIds.has(p.id))
+      .sort((a, b) => new Date(a.joined_at) - new Date(b.joined_at));
+
+    if (onlineOthers.length === 0) return; // nobody online to hand off to yet
+
+    const successor = onlineOthers[0];
+    if (successor.id !== myParticipantId) return; // only the successor acts
+
+    (async () => {
+      await supabase.from("participants").update({ is_admin: true }).eq("id", successor.id);
+      await supabase.from("participants").delete().eq("id", admin.id);
+    })();
+  }, [participants, onlineIds, joined, myParticipantId]);
+
   const handleJoin = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -61,7 +147,6 @@ export default function LobbyPage() {
     }
 
     setMyParticipantId(data.id);
-    setIsAdmin(data.is_admin);
     setJoined(true);
   };
 
