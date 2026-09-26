@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import "./LobbyPage.css";
 import ParticipantsPanel from "./ParticipantsPanel";
+import { DEFAULT_QUEUE } from "../stageConfig";
 
 const STALE_AFTER_MS = 60_000; // consider a participant gone if no heartbeat in this long
 const HEARTBEAT_INTERVAL_MS = 20_000;
@@ -11,6 +12,7 @@ const REMOVE_ANIM_MS = 350; // must match the CSS animation duration
 export default function LobbyPage() {
   const { sessionId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   // Host arrives from WelcomePage's "Go to the lobby" button with isAdmin in nav state
   const isHost = Boolean(location.state?.isAdmin);
 
@@ -169,6 +171,25 @@ export default function LobbyPage() {
     return () => clearTimeout(timeoutId);
   }, [participants, onlineIds, joined, myParticipantId]);
 
+  // Watch for the cycle starting (admin hits Continue) and move everyone —
+  // admin included — into the cycle page together.
+  useEffect(() => {
+    if (!joined || !sessionId) return;
+
+    const channel = supabase
+      .channel(`cycle-start-${sessionId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "cycle_progress", filter: `session_id=eq.${sessionId}` },
+        () => {
+          navigate(`/cycle/${sessionId}`, { state: { participantId: myParticipantId } });
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [joined, sessionId, myParticipantId, navigate]);
+
   const handleJoin = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -184,6 +205,20 @@ export default function LobbyPage() {
       return;
     }
 
+    // If the group already started the cycle before this person joined,
+    // the INSERT-watching effect above won't fire (that insert already
+    // happened) — so check directly and jump straight there.
+    const { data: existingProgress } = await supabase
+      .from("cycle_progress")
+      .select("session_id")
+      .eq("session_id", sessionId)
+      .maybeSingle();
+
+    if (existingProgress) {
+      navigate(`/cycle/${sessionId}`, { state: { participantId: data.id } });
+      return;
+    }
+
     setMyParticipantId(data.id);
     setJoined(true);
   };
@@ -195,9 +230,13 @@ export default function LobbyPage() {
     if (error) console.error("Couldn't remove participant:", error);
   };
 
-  const handleContinue = () => {
-    // Placeholder — wire this up to the next page (planning screen) once it exists
-    console.log("Continuing to next step with participants:", participants);
+  const handleContinue = async () => {
+    const { error } = await supabase
+      .from("cycle_progress")
+      .insert({ session_id: sessionId, queue: DEFAULT_QUEUE, finalized: {} });
+    if (error) console.error("Couldn't start the cycle:", error);
+    // No manual navigate here — the subscription above fires for this
+    // client too and handles moving everyone, admin included.
   };
 
   return (
