@@ -36,8 +36,9 @@
 
 .option-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(100px, 130px));
   gap: 12px;
+  justify-content: center;
 }
 
 .calendar-grid {
@@ -59,7 +60,7 @@
 }
 
 .calendar-grid .option-tile {
-  padding: 10px 6px 8px;
+  padding: 22px 6px 8px;
 }
 
 .calendar-grid .option-label {
@@ -76,7 +77,7 @@
   background: var(--beige-card);
   border: 3px solid var(--outline);
   border-radius: 18px;
-  padding: 14px 10px 10px;
+  padding: 26px 12px 10px;
   box-shadow: 0 4px 0 var(--shadow);
   display: flex;
   flex-direction: column;
@@ -101,15 +102,15 @@
 
 .option-cross-btn {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 22px;
-  height: 22px;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: 2px solid var(--outline);
   background: var(--beige-bg);
   color: #b9583f;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;

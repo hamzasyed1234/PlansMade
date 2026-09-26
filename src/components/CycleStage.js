@@ -77,7 +77,15 @@ export default function CycleStage({
         .eq("session_id", sessionId)
         .eq("stage", stage)
         .order("created_at", { ascending: true });
-      setOptions(data || []);
+
+      const rows = data || [];
+      // For the day stage, force a stable numeric order (1, 2, 3...) instead
+      // of relying on created_at — bulk-seeded rows can share a timestamp,
+      // which let tiles shuffle position and break the calendar alignment.
+      if (isDayStage) {
+        rows.sort((a, b) => Number(a.label) - Number(b.label));
+      }
+      setOptions(rows);
     };
 
     const fetchVotes = async () => {
@@ -156,11 +164,14 @@ export default function CycleStage({
         {o.is_crossed ? "\u2715" : ""}
       </button>
       <span className="option-label">{o.label}</span>
-      {!o.is_crossed && (
-        <button className="option-vote-btn" onClick={() => handleVote(o.label)}>
-          Vote {voteCountFor(o.label) > 0 && `(${voteCountFor(o.label)})`}
-        </button>
-      )}
+      <button
+        className="option-vote-btn"
+        onClick={() => handleVote(o.label)}
+        style={{ visibility: o.is_crossed ? "hidden" : "visible" }}
+        tabIndex={o.is_crossed ? -1 : 0}
+      >
+        Vote {voteCountFor(o.label) > 0 && `(${voteCountFor(o.label)})`}
+      </button>
     </div>
   );
 

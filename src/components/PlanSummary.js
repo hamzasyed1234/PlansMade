@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import "./PlanSummary.css";
 
-const STAGE_LABELS = { year: "Year", month: "Month", day: "Day", time: "Time", activity: "Activity", location: "Location" };
-
 export default function PlanSummary({ sessionId, finalized, participants, myParticipantId }) {
   const [confirmations, setConfirmations] = useState([]);
   const [copied, setCopied] = useState(false);
@@ -28,9 +26,8 @@ export default function PlanSummary({ sessionId, finalized, participants, myPart
     return () => supabase.removeChannel(channel);
   }, [sessionId]);
 
-  const summaryText = Object.entries(finalized)
-    .map(([stage, value]) => `${STAGE_LABELS[stage] || stage}: ${value}`)
-    .join("\n");
+  const { year, month, day, time, activity, location } = finalized;
+  const summaryText = `${month} ${day}, ${year} \u2014 ${time}\n${activity} at ${location}`;
 
   const handleCopy = async () => {
     try {
