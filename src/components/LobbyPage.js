@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import "./LobbyPage.css";
@@ -6,6 +6,7 @@ import ParticipantsPanel from "./ParticipantsPanel";
 
 const STALE_AFTER_MS = 60_000; // consider a participant gone if no heartbeat in this long
 const HEARTBEAT_INTERVAL_MS = 20_000;
+const REMOVE_ANIM_MS = 350; // must match the CSS animation duration
 
 export default function LobbyPage() {
   const { sessionId } = useParams();
@@ -19,11 +20,42 @@ export default function LobbyPage() {
   const [participants, setParticipants] = useState([]);
   const [onlineIds, setOnlineIds] = useState(new Set());
 
+  // Entries that were just removed from the DB but are still animating out
+  const [removingEntries, setRemovingEntries] = useState([]);
+  const prevParticipantsRef = useRef([]);
+
   // Derive "me" and admin status from the live participants list, rather than
   // tracking admin as separate state — this way an automatic handoff (below)
   // is reflected immediately for everyone, not just set once at join time.
   const me = participants.find((p) => p.id === myParticipantId);
   const isAdmin = Boolean(me?.is_admin);
+
+  // Detect participants that just disappeared from the DB list and keep them
+  // rendered briefly (with a "removing" flag) so they can animate out instead
+  // of vanishing instantly.
+  useEffect(() => {
+    const prev = prevParticipantsRef.current;
+    const newIds = new Set(participants.map((p) => p.id));
+    const justRemoved = prev.filter((p) => !newIds.has(p.id));
+
+    if (justRemoved.length > 0) {
+      setRemovingEntries((current) => [...current, ...justRemoved]);
+      justRemoved.forEach((p) => {
+        setTimeout(() => {
+          setRemovingEntries((current) => current.filter((e) => e.id !== p.id));
+        }, REMOVE_ANIM_MS);
+      });
+    }
+
+    prevParticipantsRef.current = participants;
+  }, [participants]);
+
+  const displayList = [
+    ...participants.map((p) => ({ ...p, removing: false })),
+    ...removingEntries
+      .filter((e) => !participants.some((p) => p.id === e.id))
+      .map((e) => ({ ...e, removing: true })),
+  ];
 
   // One-time cleanup: purge anyone who hasn't checked in recently.
   // Runs whenever a lobby link is opened, so a dead session gets swept
@@ -125,10 +157,16 @@ export default function LobbyPage() {
     const successor = onlineOthers[0];
     if (successor.id !== myParticipantId) return; // only the successor acts
 
-    (async () => {
+    // Debounce: don't act the instant admin looks offline. The gap is usually
+    // just the moment right after they join — their DB row lands before their
+    // presence connection finishes syncing to other tabs. Wait a few seconds
+    // and cancel if admin shows up in onlineIds before the timer fires.
+    const timeoutId = setTimeout(async () => {
       await supabase.from("participants").update({ is_admin: true }).eq("id", successor.id);
       await supabase.from("participants").delete().eq("id", admin.id);
-    })();
+    }, 5000);
+
+    return () => clearTimeout(timeoutId);
   }, [participants, onlineIds, joined, myParticipantId]);
 
   const handleJoin = async (e) => {
@@ -151,7 +189,8 @@ export default function LobbyPage() {
   };
 
   const handleKick = async (participantId) => {
-    if (!isAdmin) return; // only admin can remove anyone, including themselves
+    // Only admin can remove people, and never themselves
+    if (!isAdmin || participantId === myParticipantId) return;
     const { error } = await supabase.from("participants").delete().eq("id", participantId);
     if (error) console.error("Couldn't remove participant:", error);
   };
@@ -163,7 +202,12 @@ export default function LobbyPage() {
 
   return (
     <div className="lobby-page">
-      <ParticipantsPanel />
+      <ParticipantsPanel
+        participants={participants}
+        isAdmin={isAdmin}
+        myParticipantId={myParticipantId}
+        onKick={handleKick}
+      />
 
       <div className="lobby-content">
         {!joined ? (
@@ -194,17 +238,28 @@ export default function LobbyPage() {
             </p>
 
             <div className="participant-grid">
-              {participants.map((p) => (
-                <button
-                  key={p.id}
-                  className={`name-tile ${p.id === myParticipantId ? "me" : ""} ${isAdmin ? "kickable" : ""}`}
-                  onClick={() => handleKick(p.id)}
-                  disabled={!isAdmin}
-                >
-                  {p.name}
-                  {p.is_admin && <span className="admin-badge">Admin</span>}
-                </button>
-              ))}
+              {displayList.map((p) => {
+                const isSelf = p.id === myParticipantId;
+                const canKick = isAdmin && !isSelf && !p.removing;
+                return (
+                  <button
+                    key={p.id}
+                    className={[
+                      "name-tile",
+                      isSelf ? "me" : "",
+                      canKick ? "kickable" : "",
+                      p.removing ? "removing" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    onClick={() => canKick && handleKick(p.id)}
+                    disabled={!canKick}
+                  >
+                    {p.name}
+                    {p.is_admin && <span className="admin-badge">Admin</span>}
+                  </button>
+                );
+              })}
             </div>
 
             {isAdmin && (

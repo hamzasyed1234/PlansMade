@@ -151,6 +151,22 @@
   border-color: #b9583f;
 }
 
+.name-tile.removing {
+  animation: tile-remove 0.35s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes tile-remove {
+  from {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.55) rotate(-8deg);
+  }
+}
+
 .name-tile:disabled {
   cursor: default;
 }

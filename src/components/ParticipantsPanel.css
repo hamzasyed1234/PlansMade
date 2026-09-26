@@ -110,6 +110,13 @@
   gap: 10px;
 }
 
+.panel-empty-state {
+  font-size: 14px;
+  opacity: 0.7;
+  text-align: center;
+  margin-top: 20px;
+}
+
 .participant-row {
   display: flex;
   align-items: center;

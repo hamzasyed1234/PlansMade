@@ -1,21 +1,26 @@
 import React, { useState } from "react";
 import "./ParticipantsPanel.css";
 
-// Placeholder participants — replace with real session data later
-const MOCK_PARTICIPANTS = [
-  { id: 1, name: "You", isHost: true },
-  { id: 2, name: "Amir" },
-  { id: 3, name: "Sara" },
-  { id: 4, name: "Devon" },
-];
-
-export default function ParticipantsPanel() {
+/**
+ * Displays the icon + slide-out list of session participants.
+ * This component is presentational only — it takes the live participant
+ * data as props rather than fetching its own copy, so it always matches
+ * whatever page it's dropped into (and doesn't open a second, redundant
+ * DB subscription alongside whatever the parent page already has open).
+ *
+ * Props:
+ *   participants   — array of { id, name, is_admin }
+ *   isAdmin        — is the current user the admin? (controls kick buttons)
+ *   myParticipantId — the current user's own participant id (hides kick on self)
+ *   onKick(id)     — called when admin clicks Kick on someone else
+ */
+export default function ParticipantsPanel({
+  participants = [],
+  isAdmin = false,
+  myParticipantId = null,
+  onKick = () => {},
+}) {
   const [panelOpen, setPanelOpen] = useState(false);
-  const [participants, setParticipants] = useState(MOCK_PARTICIPANTS);
-
-  const handleKick = (id) => {
-    setParticipants((prev) => prev.filter((p) => p.id !== id));
-  };
 
   return (
     <>
@@ -44,20 +49,29 @@ export default function ParticipantsPanel() {
             &times;
           </button>
         </div>
-        <ul className="participants-list">
-          {participants.map((p) => (
-            <li key={p.id} className="participant-row">
-              <span className="participant-name">
-                {p.name} {p.isHost && <span className="host-tag">Host</span>}
-              </span>
-              {!p.isHost && (
-                <button className="kick-btn" onClick={() => handleKick(p.id)}>
-                  Kick
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
+
+        {participants.length === 0 ? (
+          <p className="panel-empty-state">No one's here yet.</p>
+        ) : (
+          <ul className="participants-list">
+            {participants.map((p) => {
+              const isSelf = p.id === myParticipantId;
+              const canKick = isAdmin && !isSelf;
+              return (
+                <li key={p.id} className="participant-row">
+                  <span className="participant-name">
+                    {p.name} {p.is_admin && <span className="host-tag">Host</span>}
+                  </span>
+                  {canKick && (
+                    <button className="kick-btn" onClick={() => onKick(p.id)}>
+                      Kick
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </>
   );

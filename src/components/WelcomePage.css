@@ -186,15 +186,15 @@
 .lobby-btn {
   font-family: "Baloo 2", sans-serif;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 17px;
   color: var(--beige-card);
   background: var(--olive);
-  border: 2px solid var(--outline);
+  border: 3px solid var(--outline);
   border-radius: 999px;
-  padding: 8px 18px;
-  margin-top: 12px;
+  padding: 14px 30px;
+  margin-top: 16px;
   cursor: pointer;
-  box-shadow: 0 3px 0 var(--olive-dark);
+  box-shadow: 0 4px 0 var(--olive-dark);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   animation: pop-in 0.25s ease;
 }
