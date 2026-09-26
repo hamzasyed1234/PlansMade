@@ -8,6 +8,7 @@ import { DEFAULT_QUEUE } from "../stageConfig";
 const STALE_AFTER_MS = 60_000; // consider a participant gone if no heartbeat in this long
 const HEARTBEAT_INTERVAL_MS = 20_000;
 const REMOVE_ANIM_MS = 350; // must match the CSS animation duration
+const SESSION_GRACE_MS = 2 * 60_000; // don't tear down a session younger than this — the host may just not have joined their own link yet
 
 export default function LobbyPage() {
   const { sessionId } = useParams();
@@ -16,6 +17,7 @@ export default function LobbyPage() {
   // Host arrives from WelcomePage's "Go to the lobby" button with isAdmin in nav state
   const isHost = Boolean(location.state?.isAdmin);
 
+  const [sessionStatus, setSessionStatus] = useState("checking"); // checking | active | ended
   const [name, setName] = useState("");
   const [joined, setJoined] = useState(false);
   const [myParticipantId, setMyParticipantId] = useState(null);
@@ -59,19 +61,52 @@ export default function LobbyPage() {
       .map((e) => ({ ...e, removing: true })),
   ];
 
-  // One-time cleanup: purge anyone who hasn't checked in recently.
-  // Runs whenever a lobby link is opened, so a dead session gets swept
-  // even if nobody was around to react to the last person leaving.
+  // Check whether this session still exists, and opportunistically clean up
+  // dead sessions. Runs whenever a lobby link is opened, so a fully-abandoned
+  // session gets swept even if nobody was around to react to the last person
+  // leaving — and once a session is torn down, its link stops working.
   useEffect(() => {
-    const purgeStale = async () => {
+    const checkAndCleanup = async () => {
+      // Purge anyone who hasn't sent a heartbeat recently
       const cutoff = new Date(Date.now() - STALE_AFTER_MS).toISOString();
-      await supabase
+      await supabase.from("participants").delete().eq("session_id", sessionId).lt("last_seen", cutoff);
+
+      const { count } = await supabase
         .from("participants")
-        .delete()
-        .eq("session_id", sessionId)
-        .lt("last_seen", cutoff);
+        .select("id", { count: "exact", head: true })
+        .eq("session_id", sessionId);
+
+      const { data: sessionRow } = await supabase
+        .from("sessions")
+        .select("created_at")
+        .eq("id", sessionId)
+        .maybeSingle();
+
+      if (!sessionRow) {
+        setSessionStatus("ended");
+        return;
+      }
+
+      const ageMs = Date.now() - new Date(sessionRow.created_at).getTime();
+
+      if (count === 0 && ageMs > SESSION_GRACE_MS) {
+        // Genuinely abandoned — nobody's here, and this isn't just the host
+        // not having joined their own fresh link yet. Tear it all down.
+        await Promise.all([
+          supabase.from("cycle_options").delete().eq("session_id", sessionId),
+          supabase.from("cycle_votes").delete().eq("session_id", sessionId),
+          supabase.from("cycle_progress").delete().eq("session_id", sessionId),
+          supabase.from("plan_confirmations").delete().eq("session_id", sessionId),
+        ]);
+        await supabase.from("sessions").delete().eq("id", sessionId);
+        setSessionStatus("ended");
+        return;
+      }
+
+      setSessionStatus("active");
     };
-    purgeStale();
+
+    checkAndCleanup();
   }, [sessionId]);
 
   // Fetch + subscribe to live participant changes for this session
@@ -192,7 +227,7 @@ export default function LobbyPage() {
 
   const handleJoin = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || sessionStatus !== "active") return;
 
     const { data, error } = await supabase
       .from("participants")
@@ -234,10 +269,36 @@ export default function LobbyPage() {
     const { error } = await supabase
       .from("cycle_progress")
       .insert({ session_id: sessionId, queue: DEFAULT_QUEUE, finalized: {} });
-    if (error) console.error("Couldn't start the cycle:", error);
-    // No manual navigate here — the subscription above fires for this
-    // client too and handles moving everyone, admin included.
+    if (error) {
+      console.error("Couldn't start the cycle:", error);
+      return;
+    }
+    // Navigate right away rather than waiting for the realtime echo of our
+    // own insert — the subscription above still fires and handles everyone
+    // else's client for us.
+    navigate(`/cycle/${sessionId}`, { state: { participantId: myParticipantId } });
   };
+
+  if (sessionStatus === "checking") {
+    return (
+      <div className="lobby-page">
+        <p className="lobby-loading">Loading&hellip;</p>
+      </div>
+    );
+  }
+
+  if (sessionStatus === "ended") {
+    return (
+      <div className="lobby-page">
+        <div className="lobby-content">
+          <div className="name-bubble">
+            <h1 className="lobby-title">This session has ended</h1>
+            <p className="lobby-subtext">Everyone's left, so this link is no longer active.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="lobby-page">

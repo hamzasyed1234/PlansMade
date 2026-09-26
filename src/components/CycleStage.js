@@ -40,36 +40,14 @@ export default function CycleStage({
   const dayOptionsForSeeding = Array.from({ length: daysInMonth }, (_, i) => String(i + 1));
   const optionsToSeed = isDayStage ? dayOptionsForSeeding : config.options;
 
-  // Seed default options once per stage. Admin-only so two clients loading
-  // the same fresh stage at once don't both insert duplicate rows.
+  // Live options + votes for this stage. Also seeds default options the
+  // first time this stage is visited (admin-only, so two clients loading a
+  // fresh stage at once don't both insert duplicates) — folded into the same
+  // fetch instead of a separate existence-check query beforehand, so this
+  // doesn't cost every participant an extra round trip on every stage.
   useEffect(() => {
     let cancelled = false;
 
-    const seedIfNeeded = async () => {
-      const { data: existing } = await supabase
-        .from("cycle_options")
-        .select("id")
-        .eq("session_id", sessionId)
-        .eq("stage", stage)
-        .limit(1);
-
-      if (cancelled) return;
-
-      if ((!existing || existing.length === 0) && isAdmin && optionsToSeed.length > 0) {
-        const rows = optionsToSeed.map((label) => ({ session_id: sessionId, stage, label }));
-        await supabase.from("cycle_options").insert(rows);
-      }
-    };
-
-    seedIfNeeded();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, stage, isAdmin]);
-
-  // Live options + votes for this stage
-  useEffect(() => {
     const fetchOptions = async () => {
       const { data } = await supabase
         .from("cycle_options")
@@ -78,14 +56,25 @@ export default function CycleStage({
         .eq("stage", stage)
         .order("created_at", { ascending: true });
 
-      const rows = data || [];
+      let rows = data || [];
+
+      if (rows.length === 0 && isAdmin && optionsToSeed.length > 0) {
+        const seedRows = optionsToSeed.map((label) => ({ session_id: sessionId, stage, label }));
+        const { data: inserted } = await supabase
+          .from("cycle_options")
+          .upsert(seedRows, { onConflict: "session_id,stage,label", ignoreDuplicates: true })
+          .select();
+        rows = inserted || [];
+      }
+
       // For the day stage, force a stable numeric order (1, 2, 3...) instead
       // of relying on created_at — bulk-seeded rows can share a timestamp,
       // which let tiles shuffle position and break the calendar alignment.
       if (isDayStage) {
         rows.sort((a, b) => Number(a.label) - Number(b.label));
       }
-      setOptions(rows);
+
+      if (!cancelled) setOptions(rows);
     };
 
     const fetchVotes = async () => {
@@ -94,7 +83,7 @@ export default function CycleStage({
         .select("*")
         .eq("session_id", sessionId)
         .eq("stage", stage);
-      setVotes(data || []);
+      if (!cancelled) setVotes(data || []);
     };
 
     fetchOptions();
@@ -114,8 +103,12 @@ export default function CycleStage({
       )
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
-  }, [sessionId, stage]);
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, stage, isAdmin, isDayStage]);
 
   const voteCountFor = (label) => votes.filter((v) => v.option_label === label).length;
   const myVote = votes.find((v) => v.participant_id === myParticipantId);
@@ -140,7 +133,12 @@ export default function CycleStage({
   const handleAddCustom = async (e) => {
     e.preventDefault();
     if (!customInput.trim()) return;
-    await supabase.from("cycle_options").insert({ session_id: sessionId, stage, label: customInput.trim() });
+    await supabase
+      .from("cycle_options")
+      .upsert(
+        { session_id: sessionId, stage, label: customInput.trim() },
+        { onConflict: "session_id,stage,label", ignoreDuplicates: true }
+      );
     setCustomInput("");
   };
 

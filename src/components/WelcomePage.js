@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../supabaseClient";
 import "./WelcomePage.css";
 import ParticipantsPanel from "./ParticipantsPanel";
 
@@ -42,9 +43,14 @@ export default function WelcomePage() {
   const handleNext = () => goToSlide(slideIndex + 1);
 
   const handleGenerateLink = async () => {
-    // Placeholder session id — swap for a real generated/stored session id later
     const newSessionId = Math.random().toString(36).slice(2, 9);
     const inviteLink = `${window.location.origin}/lobby/${newSessionId}`;
+
+    const { error } = await supabase.from("sessions").insert({ id: newSessionId });
+    if (error) {
+      console.error("Couldn't create session:", error);
+      return;
+    }
 
     try {
       await navigator.clipboard.writeText(inviteLink);
