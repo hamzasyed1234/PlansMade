@@ -107,3 +107,40 @@
     flex-direction: column;
   }
 }
+
+.copy-reminder {
+  color: #b9583f;
+  font-weight: 700;
+  font-size: 13px;
+  margin: 4px 0 16px;
+}
+
+.exit-btn {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--olive-dark);
+  background: transparent;
+  border: 2px solid var(--outline);
+  border-radius: 999px;
+  padding: 10px 22px;
+  cursor: pointer;
+  margin-top: 22px;
+  opacity: 0.8;
+}
+
+.exit-btn:hover {
+  opacity: 1;
+  background: var(--beige-card);
+}
+
+.exit-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.plan-waiting-text {
+  margin-top: 22px;
+  font-size: 14px;
+  opacity: 0.7;
+}

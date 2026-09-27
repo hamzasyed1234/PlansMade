@@ -118,6 +118,7 @@ export default function CyclePage() {
           finalized={progress.finalized}
           participants={participants}
           myParticipantId={myParticipantId}
+          isAdmin={isAdmin}
         />
       )}
     </div>

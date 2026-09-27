@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import "./PlanSummary.css";
 
-export default function PlanSummary({ sessionId, finalized, participants, myParticipantId }) {
+export default function PlanSummary({ sessionId, finalized, participants, myParticipantId, isAdmin }) {
+  const navigate = useNavigate();
   const [confirmations, setConfirmations] = useState([]);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState(false); // brief "Copied!" button feedback
+  const [hasCopiedEver, setHasCopiedEver] = useState(false); // persists, gates the exit button
+  const [showCopyReminder, setShowCopyReminder] = useState(false);
+  const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
     const fetchConfirmations = async () => {
@@ -33,6 +38,8 @@ export default function PlanSummary({ sessionId, finalized, participants, myPart
     try {
       await navigator.clipboard.writeText(summaryText);
       setCopied(true);
+      setHasCopiedEver(true);
+      setShowCopyReminder(false);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Couldn't copy plan:", err);
@@ -43,6 +50,26 @@ export default function PlanSummary({ sessionId, finalized, participants, myPart
     await supabase
       .from("plan_confirmations")
       .upsert({ session_id: sessionId, participant_id: myParticipantId, vote }, { onConflict: "session_id,participant_id" });
+  };
+
+  const handleExit = async () => {
+    if (!hasCopiedEver) {
+      setShowCopyReminder(true);
+      return;
+    }
+
+    setExiting(true);
+
+    await Promise.all([
+      supabase.from("participants").delete().eq("session_id", sessionId),
+      supabase.from("cycle_options").delete().eq("session_id", sessionId),
+      supabase.from("cycle_votes").delete().eq("session_id", sessionId),
+      supabase.from("cycle_progress").delete().eq("session_id", sessionId),
+      supabase.from("plan_confirmations").delete().eq("session_id", sessionId),
+    ]);
+    await supabase.from("sessions").delete().eq("id", sessionId);
+
+    navigate("/");
   };
 
   const myConfirmation = confirmations.find((c) => c.participant_id === myParticipantId);
@@ -77,6 +104,20 @@ export default function PlanSummary({ sessionId, finalized, participants, myPart
           );
         })}
       </div>
+
+      {isAdmin ? (
+        <>
+          {showCopyReminder && (
+            <p className="copy-reminder">Copy the plan text above before you exit!</p>
+          )}
+
+          <button className="exit-btn" onClick={handleExit} disabled={exiting}>
+            {exiting ? "Ending session\u2026" : "All done here \u2014 exit"}
+          </button>
+        </>
+      ) : (
+        <p className="plan-waiting-text">Waiting for the admin to end the session&hellip;</p>
+      )}
     </div>
   );
 }
