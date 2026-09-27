@@ -208,3 +208,19 @@
   transform: translateY(3px);
   box-shadow: 0 2px 0 var(--mustard-dark);
 }
+
+@media (max-width: 480px) {
+  .name-bubble {
+    padding: 24px 18px;
+  }
+
+  .participant-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
+  }
+
+  .name-tile {
+    font-size: 13px;
+    padding: 12px 8px;
+  }
+}

@@ -19,6 +19,7 @@
   text-align: center;
   font-family: "Nunito", sans-serif;
   color: var(--olive-dark);
+  overflow-x: hidden;
 }
 
 .cycle-title {
@@ -43,7 +44,7 @@
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -227,4 +228,64 @@
   margin-top: 30px;
   font-size: 14px;
   opacity: 0.75;
+}
+
+@media (max-width: 480px) {
+  .cycle-stage {
+    padding: 60px 12px 40px;
+  }
+
+  .option-grid {
+    grid-template-columns: repeat(auto-fit, minmax(84px, 105px));
+    gap: 8px;
+  }
+
+  .option-tile {
+    padding: 22px 6px 8px;
+  }
+
+  .option-label {
+    font-size: 13px;
+  }
+
+  .calendar-grid {
+    gap: 5px;
+  }
+
+  .calendar-weekday {
+    font-size: 10px;
+  }
+
+  .calendar-grid .option-tile {
+    padding: 18px 2px 6px;
+  }
+
+  .calendar-grid .option-label {
+    font-size: 12px;
+  }
+
+  .calendar-grid .option-vote-btn {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+
+  .calendar-grid .option-cross-btn {
+    width: 16px;
+    height: 16px;
+    top: 4px;
+    right: 4px;
+  }
+
+  .cycle-admin-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .custom-option-form {
+    flex-direction: column;
+  }
+
+  .custom-option-form input {
+    min-width: 0;
+  }
 }

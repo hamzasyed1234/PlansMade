@@ -1,5 +1,11 @@
-body {
+html, body {
   margin: 0;
+  padding: 0;
+  background: #f4eedc; /* same beige as the page components — keeps overscroll bounce on theme */
+  overscroll-behavior-y: contain; /* stops scroll from "chaining" past the page edge into the browser UI */
+}
+
+body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;

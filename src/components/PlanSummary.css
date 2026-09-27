@@ -93,3 +93,17 @@
 .confirm-icon {
   font-size: 15px;
 }
+
+@media (max-width: 480px) {
+  .plan-summary {
+    padding: 60px 14px 40px;
+  }
+
+  .confirmation-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  }
+
+  .confirm-buttons {
+    flex-direction: column;
+  }
+}
